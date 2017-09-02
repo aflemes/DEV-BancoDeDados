@@ -11,6 +11,15 @@ struct data{
 	float salario;
 };
 
+void lista_dados (struct data dataTemp){
+	
+	printf("%d  | ", dataTemp.numero);
+	printf("%s  |", dataTemp.nome);
+	printf("%d  |", dataTemp.idade);
+	printf("%f  ", dataTemp.salario);
+	printf("\n");
+}
+
 struct data saveToStruct (char* str)
 {
     struct data res;
@@ -19,25 +28,32 @@ struct data saveToStruct (char* str)
 
     while( token != NULL )
     {
-        if (0 == flag)
+    	if (0 == flag)
             res.numero = atoi(token);
-        else if (1 == flag)
-            strcpy(res.nome, token);
-        else
-            res.idade = atoi(token);
-
-        flag++;
+        else 
+			if (1 == flag)
+            	strcpy(res.nome, token);
+        	else 
+				if (2 == flag)
+            		res.idade = atoi(token);
+            	else
+            		res.salario = atof(token);
+		flag++;
         token = strtok( NULL, ";" ); 
     }
     return res;
 }
 
-void le_arquivo(){
+void pesquisa_binaria(){
+	
+}
+
+void mostra_dados(){
 	char ch;
 	int BUFFER_SIZE = sizeof(data);
 	FILE *arquivo;
 	
-	struct data arr[10];
+	struct data dataTemp;
 	
 	arquivo = fopen(URL, "r");
 	if(arquivo == NULL)
@@ -46,15 +62,14 @@ void le_arquivo(){
 		char buffer[BUFFER_SIZE];
     	int flag = 0;
     	
+    	printf("Numero| Nome   | Idade  | Salario\n");
     	while (fgets(buffer, BUFFER_SIZE, arquivo))
     	{
-        	arr[flag] = saveToStruct(buffer);
-        	printf("%\n",arr[flag].numero);
+        	dataTemp = saveToStruct(buffer);
         	
-        	flag++;
+        	lista_dados(dataTemp);
     	}
 	}
-	    
 			
 	fclose(arquivo);
 	
@@ -62,8 +77,25 @@ void le_arquivo(){
 }
 
 int main(){
-
-	le_arquivo();	
+	int in_opcao = 1;
+	
+	while(in_opcao != 0){
+		printf("Menu de Opcoes");
+		printf("1 - Listar Dados");
+		printf("2 - Pesquisa Binaria");
+		printf("3 - Consulta pela Pesquisa Binaria");
+		
+		scanf("%d",&in_opcao);
+		
+		switch(in_opcao){
+			case 0:
+				mostra_dados();
+				break;
+			case 1:
+				pesquisa_binaria();
+				break;
+		}
+	}
 	
 	system("pause");
 	
