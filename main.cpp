@@ -2,15 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define URL "data/data_short.txt"
-/*
+#define URL "data/data_shorter.txt"
+
 struct data{
 	int numero;
 	char nome[10];
 	int idade;
 	float salario;
 };
-*/
 
 struct header{
 	int qtdeRegistros;
@@ -49,22 +48,30 @@ struct data saveToStruct (char* str)
     return res;
 }
 
-int pesquisa_binaria_recv(FILE *arquivo, int qtdeRegistros){
-	int BUFFER_SIZE = 31; //sizeof(data);
-	char linha[BUFFER_SIZE] = """";
-	int position =  20;
+int pesquisa_binaria_recv(FILE *arquivo,int nodo, int meio, int fim){
+	struct data dataTemp;
 	
-	//struct data dataTemp;
-	struct data *dataTemp = (struct data *)malloc(sizeof(struct data));
+	fseek(arquivo,meio * -1 *sizeof(struct data),SEEK_END);	
+	fread(&dataTemp,sizeof(struct data),1,arquivo);
 	
-	fseek(arquivo, qtdeRegistros * BUFFER_SIZE , SEEK_SET);	
-	fgets(linha, BUFFER_SIZE, arquivo);
-	printf("%s\n",linha);
+	if (dataTemp.numero > nodo){
+		meio--;
+		return pesquisa_binaria_recv(arquivo,nodo,meio,fim);
+	}
+	else
+		if (dataTemp.numero < nodo){
+			meio++;
+			return pesquisa_binaria_recv(arquivo,nodo,meio, fim);
+		}
+		else
+			if (dataTemp.numero == nodo){
+				printf("Nro: %d\n", dataTemp.numero);
+				printf("Nome: %s\n", dataTemp.nome);				
+				printf("Idade: %d\n", dataTemp.idade);
+				printf("Salario: %2.f\n", dataTemp.salario);
+				return 1;
+			}
 	
-	//fread(arquivo, "%d%s%d%f", &dataTemp.numero, &dataTemp.nome, dataTemp.idade, dataTemp.salario);
-	//fread(linha,BUFFER_SIZE,1,arquivo);
-	
-	return 1;
 	
 }
 
@@ -74,6 +81,7 @@ void pesquisa_binaria(){
 	int BUFFER_SIZE = sizeof(data);
 	int BUFFER_HEADER_SIZE = sizeof(header);
 	FILE *arquivo;
+	struct data dataTemp;
 	
 	arquivo = fopen(URL, "r");
 	if(arquivo == NULL)
@@ -87,22 +95,15 @@ void pesquisa_binaria(){
 		printf("Qual numero deseja pesquisar?\n");
 		scanf("%d",&numero);
 		
+		system("cls");
 		
-		//next
-		//primeira linha do arquivo e o header
-		/*
-		fgets(buf_header, BUFFER_HEADER_SIZE, arquivo);
-		char *token = strtok(buf_header, ";"); 
-
-    	while( token != NULL )
-    	{
-    		header_tmp.qtdeRegistros = atoi(token);
-			token = strtok( NULL, ";" ); 
-		}
-		*/
+		fseek(arquivo,-1*sizeof(struct data),SEEK_END);
 		
-		lg_encontrou = pesquisa_binaria_recv(arquivo,numero);
-		
+		if(fread(&dataTemp,sizeof(struct data),1,arquivo)==1){
+			int fim = dataTemp.numero;
+			printf("Procurando...\n")	;
+			lg_encontrou = pesquisa_binaria_recv(arquivo,numero,fim / 2, fim);
+		}			
 	}
 			
 	fclose(arquivo);
@@ -125,10 +126,7 @@ void mostra_dados(){
 		int flag = 0;
 		
 		fgets(buffer, BUFFER_SIZE, arquivo);
-		//next
-		//primeira linha do arquivo e o header
 		
-    	
     	printf("Numero| Nome   | Idade  | Salario\n");
     	while (fgets(buffer, BUFFER_SIZE, arquivo))
     	{
