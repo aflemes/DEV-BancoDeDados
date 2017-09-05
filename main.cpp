@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define URL "data/data_shorter.txt"
+#define URL "data/data_shorter_er.txt"
 
 struct data{
 	int numero;
@@ -86,15 +86,18 @@ void pesquisa_binaria(){
 	char ch;
 	int BUFFER_SIZE = sizeof(data);
 	int BUFFER_HEADER_SIZE = sizeof(header);
-	FILE *arquivo;
+	FILE *arquivo, *arquivo_temp;
 	struct data dataTemp;
 	
 	arquivo = fopen(URL, "r");
+	arquivo_temp = fopen("data/data_shorter_temp.txt","a");
+	
 	if(arquivo == NULL)
 	    printf("Erro, nao foi possivel abrir o arquivo\n");
 	else{
 		char buffer[BUFFER_SIZE];
 		char buf_header[BUFFER_HEADER_SIZE];
+		
 		struct header header_tmp;
 		int lg_encontrou = 0;
 		
@@ -103,12 +106,17 @@ void pesquisa_binaria(){
 		
 		system("cls");
 		
-		fseek(arquivo,-1*sizeof(struct data),SEEK_END);
+		//fseek(arquivo,-1*sizeof(struct data),SEEK_END);
 		
 		if(fread(&dataTemp,sizeof(struct data),1,arquivo)==1){
 			int fim = dataTemp.numero;
-			printf("Procurando...\n")	;
-			lg_encontrou = pesquisa_binaria_recv(arquivo,numero,(fim / 2) + 1, fim);
+			char linha = dataTemp.numero;
+			
+			//printf("Procurando...\n")	;
+			fprintf(arquivo_temp,"%d", fim);
+			fprintf(arquivo_temp, "\n");
+			
+			//lg_encontrou = pesquisa_binaria_recv(arquivo,numero,(fim / 2) + 1, fim);
 		}			
 	}
 			
@@ -130,15 +138,22 @@ void mostra_dados(){
 	else{
 		char buffer[BUFFER_SIZE];
 		int flag = 0;
+		int indice = 0;
 		
-		fgets(buffer, BUFFER_SIZE, arquivo);
-		
-    	printf("Numero| Nome   | Idade  | Salario\n");
-    	while (fgets(buffer, BUFFER_SIZE, arquivo))
-    	{
-        	dataTemp = saveToStruct(buffer);
-        	
-        	lista_dados(dataTemp);
+		printf("Numero| Nome   | Idade  | Salario\n");
+    	
+    	while (1==1){		
+    		indice++;
+    	    fseek(arquivo,indice * sizeof(struct data),SEEK_SET);
+    	    
+			while (fread(&dataTemp,sizeof(struct data),1,arquivo) != NULL)
+    		{
+        		lista_dados(dataTemp);        	
+        		system("pause");
+    		}    		    		
+    		
+    		if (dataTemp.numero == 0)
+    			break;
     	}
 	}
 			
@@ -170,7 +185,5 @@ int main(){
 		system("pause");
 		system("cls");
 	}
-	
-	
-	
 }
+
