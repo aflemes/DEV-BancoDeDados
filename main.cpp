@@ -50,18 +50,24 @@ struct data saveToStruct (char* str)
 
 int pesquisa_binaria_recv(FILE *arquivo,int nodo, int meio, int fim){
 	struct data dataTemp;
+	int inicio;
 	
 	fseek(arquivo,meio * -1 *sizeof(struct data),SEEK_END);	
 	fread(&dataTemp,sizeof(struct data),1,arquivo);
+	system("pause");
 	
-	if (dataTemp.numero > nodo){
-		meio--;
-		return pesquisa_binaria_recv(arquivo,nodo,meio,fim);
+	if (dataTemp.numero > nodo){		
+		inicio = (meio /2) + 1;
+		
+		printf("1- dataTemp.numero: %d nodo: %d inicio: %d meio: %d fim: %d\n",dataTemp.numero,nodo, inicio, meio, fim);
+		return pesquisa_binaria_recv(arquivo,nodo,inicio,meio);
 	}
 	else
 		if (dataTemp.numero < nodo){
-			meio++;
-			return pesquisa_binaria_recv(arquivo,nodo,meio, fim);
+			inicio = (fim - meio) / 2 + 1;
+			printf("2- dataTemp.numero: %d nodo: %d inicio: %d meio: %d fim: %d\n",dataTemp.numero,nodo, inicio, meio, fim);
+			
+			return pesquisa_binaria_recv(arquivo,nodo,inicio,fim);
 		}
 		else
 			if (dataTemp.numero == nodo){
@@ -102,7 +108,7 @@ void pesquisa_binaria(){
 		if(fread(&dataTemp,sizeof(struct data),1,arquivo)==1){
 			int fim = dataTemp.numero;
 			printf("Procurando...\n")	;
-			lg_encontrou = pesquisa_binaria_recv(arquivo,numero,fim / 2, fim);
+			lg_encontrou = pesquisa_binaria_recv(arquivo,numero,(fim / 2) + 1, fim);
 		}			
 	}
 			
