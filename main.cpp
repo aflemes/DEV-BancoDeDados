@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define URL "data/data_shorter_er.txt"
+#define URL "data/data.txt"
 
 struct data{
 	int numero;
@@ -48,26 +48,29 @@ struct data saveToStruct (char* str)
     return res;
 }
 
-int pesquisa_binaria_recv(FILE *arquivo,int nodo, int meio, int fim){
+int pesquisa_binaria_recursiva(FILE *arquivo,int nodo,int inicio, int fim){
 	struct data dataTemp;
-	int inicio;
+	int meio = 0;
 	
-	fseek(arquivo,meio * -1 *sizeof(struct data),SEEK_END);	
+	meio = (inicio + fim) / 2;
+	
+	fseek(arquivo,meio * sizeof(struct data),SEEK_SET);	
 	fread(&dataTemp,sizeof(struct data),1,arquivo);
-	system("pause");
 	
-	if (dataTemp.numero > nodo){		
-		inicio = (meio /2) + 1;
-		
-		printf("1- dataTemp.numero: %d nodo: %d inicio: %d meio: %d fim: %d\n",dataTemp.numero,nodo, inicio, meio, fim);
-		return pesquisa_binaria_recv(arquivo,nodo,inicio,meio);
+	if (nodo < dataTemp.numero){
+		/*
+		printf("1- dataTemp.numero: %d nodo: %d inicio, %d meio: %d fim: %d\n",dataTemp.numero,nodo,inicio, meio, fim);
+		system("pause");
+		*/
+		return pesquisa_binaria_recursiva(arquivo,nodo,inicio, meio);
 	}
 	else
-		if (dataTemp.numero < nodo){
-			inicio = (fim - meio) / 2 + 1;
-			printf("2- dataTemp.numero: %d nodo: %d inicio: %d meio: %d fim: %d\n",dataTemp.numero,nodo, inicio, meio, fim);
-			
-			return pesquisa_binaria_recv(arquivo,nodo,inicio,fim);
+		if (nodo > dataTemp.numero){
+			/*
+			printf("2- dataTemp.numero: %d nodo: %d inicio: %d meio: %d fim: %d\n",dataTemp.numero,nodo,inicio, meio, fim);
+			system("pause");
+			*/
+			return pesquisa_binaria_recursiva(arquivo,nodo,meio,fim);
 		}
 		else
 			if (dataTemp.numero == nodo){
@@ -86,11 +89,10 @@ void pesquisa_binaria(){
 	char ch;
 	int BUFFER_SIZE = sizeof(data);
 	int BUFFER_HEADER_SIZE = sizeof(header);
-	FILE *arquivo, *arquivo_temp;
+	FILE *arquivo;
 	struct data dataTemp;
 	
 	arquivo = fopen(URL, "r");
-	arquivo_temp = fopen("data/data_shorter_temp.txt","a");
 	
 	if(arquivo == NULL)
 	    printf("Erro, nao foi possivel abrir o arquivo\n");
@@ -105,19 +107,16 @@ void pesquisa_binaria(){
 		scanf("%d",&numero);
 		
 		system("cls");
+		printf("Procurando...\n");
 		
-		//fseek(arquivo,-1*sizeof(struct data),SEEK_END);
+		//seta para o fim do arquivo
+		fseek(arquivo,sizeof(struct data) * -1,SEEK_END);
 		
-		if(fread(&dataTemp,sizeof(struct data),1,arquivo)==1){
+		if (fread(&dataTemp,sizeof(struct data),1,arquivo) > 0){
 			int fim = dataTemp.numero;
-			char linha = dataTemp.numero;
 			
-			//printf("Procurando...\n")	;
-			fprintf(arquivo_temp,"%d", fim);
-			fprintf(arquivo_temp, "\n");
-			
-			//lg_encontrou = pesquisa_binaria_recv(arquivo,numero,(fim / 2) + 1, fim);
-		}			
+			pesquisa_binaria_recursiva(arquivo,numero,1,fim);	
+		}
 	}
 			
 	fclose(arquivo);
@@ -132,7 +131,7 @@ void mostra_dados(){
 	
 	struct data dataTemp;
 	
-	arquivo = fopen(URL, "r");
+	arquivo = fopen(URL, "rb");
 	if(arquivo == NULL)
 	    printf("Erro, nao foi possivel abrir o arquivo\n");
 	else{
@@ -141,20 +140,11 @@ void mostra_dados(){
 		int indice = 0;
 		
 		printf("Numero| Nome   | Idade  | Salario\n");
-    	
-    	while (1==1){		
-    		indice++;
-    	    fseek(arquivo,indice * sizeof(struct data),SEEK_SET);
-    	    
-			while (fread(&dataTemp,sizeof(struct data),1,arquivo) != NULL)
-    		{
-        		lista_dados(dataTemp);        	
-        		system("pause");
-    		}    		    		
-    		
-    		if (dataTemp.numero == 0)
-    			break;
-    	}
+    	   
+		while (fread(&dataTemp,sizeof(struct data),1,arquivo) != NULL)
+		{
+    		lista_dados(dataTemp);
+		}
 	}
 			
 	fclose(arquivo);
