@@ -2,13 +2,19 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define URL "data/data.txt"
+#define URL 	  "data/data.txt"
+#define URL_INDEX "data/index.txt"
 
 struct data{
 	int numero;
 	char nome[10];
 	int idade;
 	float salario;
+};
+
+struct index{
+	int numero;
+	int endereco;
 };
 
 struct header{
@@ -48,6 +54,9 @@ struct data saveToStruct (char* str)
     return res;
 }
 
+/*
+* metodo responsavel por fazer a pesquisa binaria diretamente no arquivo de dados
+*/ 
 int pesquisa_binaria_recursiva(FILE *arquivo,int nodo,int inicio, int fim){
 	struct data dataTemp;
 	int meio = 0;
@@ -80,8 +89,31 @@ int pesquisa_binaria_recursiva(FILE *arquivo,int nodo,int inicio, int fim){
 				printf("Salario: %2.f\n", dataTemp.salario);
 				return 1;
 			}
+}
+
+/*
+* metodo responsavel por fazer a pesquisa binaria no arquivo de índice
+*/ 
+int pesquisa_binaria_index(FILE *indice,int nodo,int inicio, int fim){
+	struct index indexTemp;
+	int meio = 0;
 	
+	meio = (inicio + fim) / 2;
 	
+	fseek(indice,meio * sizeof(struct index),SEEK_SET);	
+	fread(&indexTemp,sizeof(struct index),1,indice);
+	
+	if (nodo < indexTemp.numero){
+		return pesquisa_binaria_index(indice,nodo,inicio, meio);
+	}
+	else
+		if (nodo > indexTemp.numero){
+			return pesquisa_binaria_index(indice,nodo,meio,fim);
+		}
+		else
+			if (indexTemp.numero == nodo){
+				return indexTemp.endereco;
+			}
 }
 
 void pesquisa_binaria(){
@@ -151,6 +183,75 @@ void mostra_dados(){
 	
 	return;	
 }
+void indexar(int numero, int endereco){
+	struct index *indexTemp = (struct index*) malloc(sizeof(struct index));
+	
+	indexTemp->numero   = numero;
+	indexTemp->endereco = endereco;
+	
+	FILE *index = fopen(URL, "rb");	
+	fwrite(&indexTemp,sizeof(struct index),1,index);
+	fclose(index);
+}
+
+void reindexar(){
+	char ch;
+	int BUFFER_SIZE = sizeof(data);
+	FILE *arquivo;
+	
+	struct data dataTemp;
+	
+	arquivo = fopen(URL, "rb");
+	if(arquivo == NULL)
+	    printf("Erro, nao foi possivel abrir o index\n");
+	else{
+		char buffer[BUFFER_SIZE];
+		   
+		while (fread(&dataTemp,sizeof(struct data),1,arquivo) != NULL)
+		{
+    		indexar(dataTemp.numero,ftell(arquivo));
+		}
+	}
+			
+	fclose(arquivo);
+	
+	return;		
+}
+
+void mostrar_por_index(){
+	char ch;
+	int BUFFER_SIZE = sizeof(data);
+	struct index indexTemp;
+	FILE *index;
+	
+	index = fopen(URL_INDEX, "rb");	
+	
+	if(index == NULL){
+	    printf("Erro, nao foi possivel abrir o index\n");
+	    return;
+	}
+	
+	char buffer[BUFFER_SIZE];
+		   
+	printf("Qual numero deseja pesquisar?\n");
+	scanf("%d",&numero);
+		
+	system("cls");
+	printf("Procurando...\n");
+		
+	//seta para o fim do arquivo
+	fseek(index,sizeof(struct index) * -1,SEEK_END);
+	
+	if (fread(&indexTemp,sizeof(struct index),1,index) > 0){
+		int fim = indexTemp.numero;
+		int endereco = pesquisa_binaria_index(index,numero,1,fim);	
+	}
+			
+	fclose(index);
+	
+	return;
+	
+}
 
 int main(){
 	int in_opcao = 1;
@@ -169,6 +270,12 @@ int main(){
 				break;
 			case 2:
 				pesquisa_binaria();
+				break;
+			case 3:
+				reindexar();
+				break;
+			case 4:
+				mostrar_por_index();
 				break;
 		}
 		
