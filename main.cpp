@@ -183,20 +183,25 @@ void mostra_dados(){
 	
 	return;	
 }
-void indexar(int numero, int endereco){
+void indexar(FILE *index,int numero, int endereco, int qtdeRegistros){
 	struct index *indexTemp = (struct index*) malloc(sizeof(struct index));
+	float percentual = (numero * 100) / qtdeRegistros;
+	
+	if (numero % 1000 == 0){
+		system("cls");
+		printf("Percentual %d\n",int(percentual));
+	}
 	
 	indexTemp->numero   = numero;
 	indexTemp->endereco = endereco;
 	
-	FILE *index = fopen(URL, "rb");	
 	fwrite(&indexTemp,sizeof(struct index),1,index);
-	fclose(index);
 }
 
 void reindexar(){
 	char ch;
 	int BUFFER_SIZE = sizeof(data);
+	int qtdeRegistros;
 	FILE *arquivo;
 	
 	struct data dataTemp;
@@ -207,10 +212,24 @@ void reindexar(){
 	else{
 		char buffer[BUFFER_SIZE];
 		   
+		system("cls");
+		printf("reindexando arquivo, aguarde...\n");
+		
+		//busca a quantidade de registros
+		fseek(arquivo,sizeof(struct data) * -1,SEEK_END);	
+		if (fread(&dataTemp,sizeof(struct data),1,arquivo) > 0)
+			qtdeRegistros = dataTemp.numero;
+			
+		//seta para o inicio
+		fseek(arquivo,0,SEEK_SET);
+		//apaga o arquivo de indice e cria um novo
+		FILE *index = fopen(URL_INDEX, "w");	
 		while (fread(&dataTemp,sizeof(struct data),1,arquivo) != NULL)
 		{
-    		indexar(dataTemp.numero,ftell(arquivo));
+    		indexar(index,dataTemp.numero,ftell(arquivo),qtdeRegistros);
 		}
+		
+		fclose(index);
 	}
 			
 	fclose(arquivo);
@@ -221,8 +240,11 @@ void reindexar(){
 void mostrar_por_index(){
 	char ch;
 	int BUFFER_SIZE = sizeof(data);
+	int numero;
 	struct index indexTemp;
-	FILE *index;
+	struct data dataTemp;
+	char buffer[BUFFER_SIZE];
+	FILE *index,*arquivo;
 	
 	index = fopen(URL_INDEX, "rb");	
 	
@@ -231,8 +253,6 @@ void mostrar_por_index(){
 	    return;
 	}
 	
-	char buffer[BUFFER_SIZE];
-		   
 	printf("Qual numero deseja pesquisar?\n");
 	scanf("%d",&numero);
 		
@@ -245,6 +265,18 @@ void mostrar_por_index(){
 	if (fread(&indexTemp,sizeof(struct index),1,index) > 0){
 		int fim = indexTemp.numero;
 		int endereco = pesquisa_binaria_index(index,numero,1,fim);	
+		
+		if (endereco > 0){
+			arquivo = fopen(URL, "rb");			
+			
+			if (index == NULL)
+				return;
+			
+			fseek(arquivo,sizeof(struct data) * endereco,SEEK_SET);	
+			fread(&dataTemp,sizeof(struct data),1,arquivo);
+			
+			lista_dados(dataTemp);
+		}
 	}
 			
 	fclose(index);
@@ -260,7 +292,8 @@ int main(){
 		printf("Menu de Opcoes\n");
 		printf("1 - Listar Dados\n");
 		printf("2 - Pesquisa Binaria\n");
-		printf("3 - Consulta pela Pesquisa Binaria\n");
+		printf("3 - Reindexar\n");
+		printf("4 - Pesquisa por Index\n");
 		
 		scanf("%d",&in_opcao);
 		
