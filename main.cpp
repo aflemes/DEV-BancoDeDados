@@ -22,11 +22,16 @@ struct header{
 };
 
 void lista_dados (struct data dataTemp){
-	
 	printf("%d  | ", dataTemp.numero);
 	printf("%s  |", dataTemp.nome);
 	printf("%d  |", dataTemp.idade);
 	printf("%f  ", dataTemp.salario);
+	printf("\n");
+}
+
+void lista_dados_index (struct index indexTemp){
+	printf("%d  | ", indexTemp.numero);
+	printf("%d  |" , indexTemp.endereco);
 	printf("\n");
 }
 
@@ -156,6 +161,34 @@ void pesquisa_binaria(){
 	return;	
 }
 
+void mostra_dados_index(){
+	char ch;
+	int BUFFER_SIZE = sizeof(index);
+	FILE *index;
+	
+	struct index indexTemp;
+	
+	index = fopen(URL_INDEX, "rb");
+	if(index == NULL)
+	    printf("Erro, nao foi possivel abrir o arquivo\n");
+	else{
+		char buffer[BUFFER_SIZE];
+		int flag = 0;
+		int indice = 0;
+		
+		printf("Numero| Endereco\n");
+    	   
+		while (fread(&indexTemp,sizeof(struct index),1,index) != NULL)
+		{
+    		lista_dados_index(indexTemp);
+		}
+	}
+			
+	fclose(index);
+	
+	return;	
+}
+
 void mostra_dados(){
 	char ch;
 	int BUFFER_SIZE = sizeof(data);
@@ -184,7 +217,7 @@ void mostra_dados(){
 	return;	
 }
 void indexar(FILE *index,int numero, int endereco, int qtdeRegistros){
-	struct index *indexTemp = (struct index*) malloc(sizeof(struct index));
+	struct index indexTemp;
 	float percentual = (numero * 100) / qtdeRegistros;
 	
 	if (numero % 1000 == 0){
@@ -192,8 +225,8 @@ void indexar(FILE *index,int numero, int endereco, int qtdeRegistros){
 		printf("Percentual %d\n",int(percentual));
 	}
 	
-	indexTemp->numero   = numero;
-	indexTemp->endereco = endereco;
+	indexTemp.numero   = numero;
+	indexTemp.endereco = endereco;
 	
 	fwrite(&indexTemp,sizeof(struct index),1,index);
 }
@@ -223,7 +256,7 @@ void reindexar(){
 		//seta para o inicio
 		fseek(arquivo,0,SEEK_SET);
 		//apaga o arquivo de indice e cria um novo
-		FILE *index = fopen(URL_INDEX, "w");	
+		FILE *index = fopen(URL_INDEX, "wb");	
 		while (fread(&dataTemp,sizeof(struct data),1,arquivo) != NULL)
 		{
     		indexar(index,dataTemp.numero,ftell(arquivo),qtdeRegistros);
@@ -294,6 +327,7 @@ int main(){
 		printf("2 - Pesquisa Binaria\n");
 		printf("3 - Reindexar\n");
 		printf("4 - Pesquisa por Index\n");
+		printf("5 - Listar Dados Index\n");
 		
 		scanf("%d",&in_opcao);
 		
@@ -309,6 +343,9 @@ int main(){
 				break;
 			case 4:
 				mostrar_por_index();
+				break;
+			case 5:
+				mostra_dados_index();
 				break;
 		}
 		
