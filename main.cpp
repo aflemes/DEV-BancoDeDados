@@ -2,8 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define URL 	  "data/data.txt"
-#define URL_INDEX "data/index.txt"
+#define URL 	    "data/data.txt"
+#define URL_INDEX   "data/index.txt"
+//-----------------------------------
+#define URL_SHUFFLE "data/data_shuffle.txt"
+#define URL_SHUFFLE_INDEX "data/index_shuffle.txt"
 
 struct data{
 	int numero;
@@ -191,12 +194,23 @@ void mostra_dados_index(){
 
 void mostra_dados(){
 	char ch;
-	int BUFFER_SIZE = sizeof(data);
+	int BUFFER_SIZE = sizeof(data), opcao = 0;
 	FILE *arquivo;
 	
 	struct data dataTemp;
 	
-	arquivo = fopen(URL, "rb");
+	system("cls");
+	printf("Qual arquivo deseja listar?\n");
+	printf("1 - Arquivo Sequencial\n");
+	printf("2 - Arquivo nao Sequencial?\n");
+	scanf("%d",&opcao);
+	
+	if (opcao == 1){
+		arquivo = fopen(URL, "rb");	
+	}
+	else
+		arquivo = fopen(URL_SHUFFLE, "rb");
+	
 	if(arquivo == NULL)
 	    printf("Erro, nao foi possivel abrir o arquivo\n");
 	else{
@@ -216,14 +230,8 @@ void mostra_dados(){
 	
 	return;	
 }
-void indexar(FILE *index,int numero, int endereco, int qtdeRegistros){
+void indexar(FILE *index,int numero, int endereco){
 	struct index indexTemp;
-	float percentual = (numero * 100) / qtdeRegistros;
-	
-	if (numero % 1000 == 0){
-		system("cls");
-		printf("Percentual %d\n",int(percentual));
-	}
 	
 	indexTemp.numero   = numero;
 	indexTemp.endereco = endereco;
@@ -234,12 +242,23 @@ void indexar(FILE *index,int numero, int endereco, int qtdeRegistros){
 void reindexar(){
 	char ch;
 	int BUFFER_SIZE = sizeof(data);
-	int qtdeRegistros;
+	int qtdeRegistros, opcao;
 	FILE *arquivo;
 	
 	struct data dataTemp;
 	
-	arquivo = fopen(URL, "rb");
+	system("cls");
+	printf("Qual arquivo deseja listar?\n");
+	printf("1 - Arquivo Sequencial\n");
+	printf("2 - Arquivo nao Sequencial?\n");
+	scanf("%d",&opcao);
+	
+	if (opcao == 1){
+		arquivo = fopen(URL, "rb");	
+	}
+	else
+		arquivo = fopen(URL_SHUFFLE, "rb");
+		
 	if(arquivo == NULL)
 	    printf("Erro, nao foi possivel abrir o index\n");
 	else{
@@ -247,19 +266,18 @@ void reindexar(){
 		   
 		system("cls");
 		printf("reindexando arquivo, aguarde...\n");
-		
-		//busca a quantidade de registros
-		fseek(arquivo,sizeof(struct data) * -1,SEEK_END);	
-		if (fread(&dataTemp,sizeof(struct data),1,arquivo) > 0)
-			qtdeRegistros = dataTemp.numero;
-			
 		//seta para o inicio
 		fseek(arquivo,0,SEEK_SET);
 		//apaga o arquivo de indice e cria um novo
-		FILE *index = fopen(URL_INDEX, "wb");	
+		FILE *index;
+		if (opcao == 1)
+			index = fopen(URL_INDEX, "wb");	
+		else 
+			index = fopen(URL_SHUFFLE_INDEX, "wb");
+				
 		while (fread(&dataTemp,sizeof(struct data),1,arquivo) != NULL)
 		{
-    		indexar(index,dataTemp.numero,ftell(arquivo),qtdeRegistros);
+    		indexar(index,dataTemp.numero,ftell(arquivo));
 		}
 		
 		fclose(index);
@@ -318,6 +336,44 @@ void mostrar_por_index(){
 	
 }
 
+void shuffle(){
+	char ch;
+	int BUFFER_SIZE = sizeof(data);
+	int qtdeRegistros = 0;
+	struct data dataTemp;
+	char buffer[BUFFER_SIZE];
+	FILE *shuffle,*arquivo;
+	
+	arquivo = fopen(URL, "rb");	
+	
+	if(arquivo == NULL){
+	    printf("Erro, nao foi possivel abrir o index\n");
+	    return;
+	}
+	//seta para o fim do arquivo
+	fseek(arquivo,sizeof(struct data) * -1,SEEK_END);
+	if (fread(&dataTemp,sizeof(struct data),1,arquivo) > 0){
+		qtdeRegistros = dataTemp.numero;	
+	}
+	else return;
+	
+	system("cls");
+	printf("Escrevendo novo arquivo, aguarde...\n");
+	
+	shuffle = fopen(URL_SHUFFLE, "wb");
+	
+	for (int i=qtdeRegistros; i > 0; i--){
+		fseek(arquivo,sizeof(struct data) * i,SEEK_SET);	
+		
+		if (fread(&dataTemp,sizeof(struct data),1,arquivo) > 0){
+			fwrite(&dataTemp,sizeof(struct data),1,shuffle);	
+		}
+	}
+	
+	fclose(arquivo);
+	fclose(shuffle);
+}
+
 int main(){
 	int in_opcao = 1;
 	
@@ -328,6 +384,7 @@ int main(){
 		printf("3 - Reindexar\n");
 		printf("4 - Pesquisa por Index\n");
 		printf("5 - Listar Dados Index\n");
+		printf("6 - Novo arquivo s/ ordem\n");
 		
 		scanf("%d",&in_opcao);
 		
@@ -346,6 +403,9 @@ int main(){
 				break;
 			case 5:
 				mostra_dados_index();
+				break;
+			case 6:
+				shuffle();
 				break;
 		}
 		
