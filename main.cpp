@@ -112,10 +112,19 @@ int pesquisa_binaria_index(FILE *indice,int nodo,int inicio, int fim){
 	fread(&indexTemp,sizeof(struct index),1,indice);
 	
 	if (nodo < indexTemp.numero){
+		/*
+		printf("1- dataTemp.numero: %d nodo: %d inicio, %d meio: %d fim: %d\n",indexTemp.numero,nodo,inicio, meio, fim);
+		system("pause");
+		*/
 		return pesquisa_binaria_index(indice,nodo,inicio, meio);
 	}
 	else
 		if (nodo > indexTemp.numero){
+			/*
+			printf("2- indexTemp.numero: %d nodo: %d inicio: %d meio: %d fim: %d\n",indexTemp.numero,nodo,inicio, meio, fim);
+			system("pause");
+			*/
+			
 			return pesquisa_binaria_index(indice,nodo,meio,fim);
 		}
 		else
@@ -176,14 +185,18 @@ void mostra_dados_index(){
 	    printf("Erro, nao foi possivel abrir o arquivo\n");
 	else{
 		char buffer[BUFFER_SIZE];
-		int flag = 0;
-		int indice = 0;
+		int contador = 0;
 		
 		printf("Numero| Endereco\n");
     	   
 		while (fread(&indexTemp,sizeof(struct index),1,index) != NULL)
 		{
     		lista_dados_index(indexTemp);
+    		
+    		contador++;
+    		
+    		if (contador == 1000)
+    			break;
 		}
 	}
 			
@@ -215,8 +228,6 @@ void mostra_dados(){
 	    printf("Erro, nao foi possivel abrir o arquivo\n");
 	else{
 		char buffer[BUFFER_SIZE];
-		int flag = 0;
-		int indice = 0;
 		
 		printf("Numero| Nome   | Idade  | Salario\n");
     	   
@@ -291,14 +302,24 @@ void reindexar(){
 void mostrar_por_index(){
 	char ch;
 	int BUFFER_SIZE = sizeof(data);
-	int numero;
+	int numero,opcao;
 	struct index indexTemp;
 	struct data dataTemp;
 	char buffer[BUFFER_SIZE];
 	FILE *index,*arquivo;
 	
-	index = fopen(URL_INDEX, "rb");	
+	system("cls");
+	printf("Qual arquivo deseja listar?\n");
+	printf("1 - Arquivo Sequencial\n");
+	printf("2 - Arquivo nao Sequencial?\n");
+	scanf("%d",&opcao);
 	
+	if (opcao == 1){
+		index = fopen(URL_INDEX, "rb");	
+	}
+	else
+		index = fopen(URL_SHUFFLE_INDEX, "rb");
+		
 	if(index == NULL){
 	    printf("Erro, nao foi possivel abrir o index\n");
 	    return;
@@ -323,7 +344,7 @@ void mostrar_por_index(){
 			if (index == NULL)
 				return;
 			
-			fseek(arquivo,sizeof(struct data) * endereco,SEEK_SET);	
+			fseek(arquivo,endereco - sizeof(struct data),SEEK_SET);	
 			fread(&dataTemp,sizeof(struct data),1,arquivo);
 			
 			lista_dados(dataTemp);
@@ -362,11 +383,13 @@ void shuffle(){
 	
 	shuffle = fopen(URL_SHUFFLE, "wb");
 	
-	for (int i=qtdeRegistros; i > 0; i--){
-		fseek(arquivo,sizeof(struct data) * i,SEEK_SET);	
+	for (int i=0; i < qtdeRegistros; i+=5){
+		for (int j = 5; j > 0 ;j--){
+			fseek(arquivo,sizeof(struct data) * (j + i),SEEK_SET);
 		
-		if (fread(&dataTemp,sizeof(struct data),1,arquivo) > 0){
-			fwrite(&dataTemp,sizeof(struct data),1,shuffle);	
+			if (fread(&dataTemp,sizeof(struct data),1,arquivo) > 0){
+				fwrite(&dataTemp,sizeof(struct data),1,shuffle);	
+			}
 		}
 	}
 	
