@@ -8,9 +8,15 @@
 #define URL_SHUFFLE "data/data_shuffle.txt"
 #define URL_SHUFFLE_INDEX "data/index_shuffle.txt"
 //-----------------------------------
+/*
+INFORMACOES SOBRE O HASHING
+qtdeRegistros = 1014514
+blocos = qtdeRegistros * 0.8
+f(x) = x % blocos
+*/
 #define URL_BUCKET "data/bucket.txt"
-#define BLOCOS 20
-#define LIM_BUCKET 10
+#define BLOCOS 12000
+#define LIM_BUCKET 100
 
 struct data{
 	int numero;
@@ -26,7 +32,7 @@ struct index{
 
 struct nodo{
 	char numero[10];
-	int endereco;
+	char endereco[10];
 };
 
 struct bucket{
@@ -199,6 +205,21 @@ void pesquisa_binaria(){
 	return;	
 }
 
+void acessa_arquivo_principal(char endereco[10]){
+	FILE *arquivo = fopen(URL,"r");	
+	int posicao = atoi(endereco);
+	struct data dataTemp;
+	
+	if (arquivo == NULL)
+		return;
+	
+	rewind(arquivo);
+	fseek(arquivo,sizeof(struct data) * posicao,SEEK_SET); 
+	fread(&dataTemp,sizeof(struct data),1,arquivo);
+	
+	lista_dados(dataTemp);
+}
+
 void mostra_dados_bucket(){
 	char ch;
 	int BUFFER_SIZE = sizeof(bucket), opcao = 0, numero = 0, func_hash = 0;
@@ -223,15 +244,29 @@ void mostra_dados_bucket(){
 			}	
 		}
 		else{
+			
 			printf("Informe o numero que deseja pesquisar\n");
 			scanf("%d",&numero);
+			
+			char numero_tmp[10];
+			
+			itoa(numero, numero_tmp, 10);
 			
 			func_hash = numero % BLOCOS;
 			fseek(bucket,sizeof(struct bucket) * func_hash,SEEK_SET); 
 			fread(&bucketTemp,sizeof(struct bucket),1,bucket);
 			
 			printf("Hash| Endereco\n");
-			lista_dados_bucket(bucketTemp);
+			for (int i=0; i < sizeof(bucketTemp.values);i++){
+				if (strcmp(bucketTemp.values[i].numero,numero_tmp) == 0){
+					acessa_arquivo_principal(bucketTemp.values[i].endereco);
+					break;
+				}
+				
+				if (strcmp(bucketTemp.values[i].numero,"") == 0)
+					break;
+			}
+			
 		}
 	}
 			
@@ -240,58 +275,36 @@ void mostra_dados_bucket(){
 	return;	
 }
 
-void misc(){
-	int BUFFER_SIZE = sizeof(bucket);
+void alocacao_hashing(){
 	FILE *bucket;
 	
-	struct bucket bucketTemp,newStruct;
-	struct nodo nodoTemp;
+	struct bucket bucketTemp;
 	
-	bucket = fopen(URL_BUCKET, "wb");
+	bucket = fopen(URL_BUCKET, "r");
 	if(bucket == NULL)
 	    printf("Erro, nao foi possivel abrir o arquivo\n");
 	else{
-		for (int i=0; i < 20; i++){
-			
-			itoa(i, bucketTemp.hash, 10);
-			
-			for(int i=0; i < LIM_BUCKET; i++){
-				strcpy(bucketTemp.values[i].numero,"");
-				//bucketTemp.values[i].endereco = 0;
-			}
-			fwrite(&bucketTemp,sizeof(struct bucket),1,bucket);	
-		}
+		long qtdeTotal = BLOCOS * LIM_BUCKET;
+		long qtdeUtilizado = 0;
 		
-		fclose(bucket);
-		fopen(URL_BUCKET, "r+");
-		
-		char buffer[BUFFER_SIZE];
-		int contador = 0;
-		
-		fseek(bucket,sizeof(struct bucket) * 10,SEEK_SET);	
-		if (fread(&bucketTemp,sizeof(struct bucket),1,bucket) > 0){
-			fseek(bucket,sizeof(struct bucket) * 10,SEEK_SET);
+		for (int i=0; i < BLOCOS;i++){
+			fseek(bucket,sizeof(struct bucket) * i,SEEK_SET); 
+			fread(&bucketTemp,sizeof(struct bucket),1,bucket);
 			
-			//varre os elementos do bucket
-			for(int j=0;j < LIM_BUCKET;j++){
-				//encontrei uma posicao valida 
-				if (bucketTemp.values[j].numero == 0){
-					//printf("%d arr %d --\n",bucketTemp.hash,j);
-						
-					strcpy(nodoTemp.numero,"");
-					
-					newStruct= bucketTemp;
-					
-					for (int k=0;k < LIM_BUCKET; k++){
-						newStruct.values[k] = bucketTemp.values[k];	
-					}
-					newStruct.values[j] = nodoTemp;
+			for (int j=0;j < LIM_BUCKET;j++){
+				if (strcmp(bucketTemp.values[j].numero,"") == 0)
 					break;
-				}
+				else
+					qtdeUtilizado++;
 			}
-			
-			fwrite(&newStruct,sizeof(struct bucket),1,bucket);
+				
 		}
+		
+		printf("Total utilizado: %d\n",qtdeUtilizado);
+		printf("Total possivel : %d\n",qtdeTotal);
+		float prct = (qtdeUtilizado * 100) / qtdeTotal;
+		
+		printf("Percentual Utilizado %.2f\n",prct);
 	}
 			
 	fclose(bucket);
@@ -534,6 +547,8 @@ void init_hashing(){
 		printf("Nao foi possivel ler o arquivo.");
 		return;
 	}
+	system("cls");
+	printf("Inicializando o bucket...\n");
 	//inicializa o bucket
 	for (int i=0;i < BLOCOS; i++){
 		itoa(i, bucketInitialize.hash, 10);
@@ -558,7 +573,8 @@ void init_hashing(){
 		struct nodo nodoTemp;
 		
 		//le todos os registros do arquivo
-		for (int i=0; i < 100; i++){
+		
+		for (int i=0; i < qtdeRegistros; i++){
 			fseek(arquivo,sizeof(struct data) * i,SEEK_SET);
 		
 			//le a linha
@@ -579,8 +595,8 @@ void init_hashing(){
 					for(int j=0;j < LIM_BUCKET;j++){
 						//encontrei uma posicao valida 
 						if (strcmp(bucketTemp.values[j].numero,"") == 0){
-							itoa(value, nodoTemp.numero, 10);
-							//nodoTemp.endereco = i;
+							itoa(value, nodoTemp.numero  , 10);
+							itoa(i    , nodoTemp.endereco, 10);
 							
 							newStruct = bucketTemp;
 							for (int k=0;k < LIM_BUCKET; k++){
@@ -593,17 +609,13 @@ void init_hashing(){
 						}
 					}
 					
-					if (encontrei_posicao == 0){
-						printf("preciso de um tratamento de colisao\n");
-					}
-					else
+					if (encontrei_posicao == 1)
 						fwrite(&newStruct,sizeof(struct bucket),1,bucket);
-					
 				}
 			}
 		}
 	}
-	
+	fclose(bucket);
 	fclose(arquivo);
 	
 }
@@ -621,6 +633,7 @@ int main(){
 		printf("6 - Novo arquivo s/ ordem\n");
 		printf("7 - Inicializa Hashing\n");
 		printf("8 - Listar o bucket\n");
+		printf("9 - Alocacao do bucket\n");
 		
 		scanf("%d",&in_opcao);
 		
@@ -650,7 +663,7 @@ int main(){
 				mostra_dados_bucket();
 				break;
 			case 9:
-				misc();
+				alocacao_hashing();
 				break;
 				
 		}

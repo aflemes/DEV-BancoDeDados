@@ -1,0 +1,4 @@
+hash
+é melhor manter uma tabela de hash entre 70 e 90% cheia.
+Logo, se esperarmos ter r registros para armazenar na tabela, devemos escolher M locais para o espaço
+de endereço, tal que r/m esteja entre 0,7 e 0,9
