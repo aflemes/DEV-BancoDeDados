@@ -7,6 +7,10 @@
 //-----------------------------------
 #define URL_SHUFFLE "data/data_shuffle.txt"
 #define URL_SHUFFLE_INDEX "data/index_shuffle.txt"
+//-----------------------------------
+#define URL_BUCKET "data/bucket.txt"
+#define BLOCOS 20
+#define LIM_BUCKET 10
 
 struct data{
 	int numero;
@@ -20,21 +24,43 @@ struct index{
 	int endereco;
 };
 
+struct nodo{
+	char numero[10];
+	int endereco;
+};
+
+struct bucket{
+	char hash[10];
+	struct nodo values[LIM_BUCKET];
+};
+
 struct header{
 	int qtdeRegistros;
 };
 
 void lista_dados (struct data dataTemp){
 	printf("%d  | ", dataTemp.numero);
-	printf("%s  |", dataTemp.nome);
-	printf("%d  |", dataTemp.idade);
-	printf("%f  ", dataTemp.salario);
+	printf("%s  |" , dataTemp.nome);
+	printf("%d  |" , dataTemp.idade);
+	printf("%f  "  , dataTemp.salario);
 	printf("\n");
 }
 
 void lista_dados_index (struct index indexTemp){
 	printf("%d  | ", indexTemp.numero);
 	printf("%d  |" , indexTemp.endereco);
+	printf("\n");
+}
+
+void lista_dados_bucket(struct bucket bucketTemp){
+	printf("%s  | ", bucketTemp.hash);
+	
+	for(int i = 0; i < LIM_BUCKET; i++){
+		if (strcmp(bucketTemp.values[i].numero,"") == 0)
+			break;
+		else
+			printf("%s  |" , bucketTemp.values[i].numero);
+	}
 	printf("\n");
 }
 
@@ -169,6 +195,106 @@ void pesquisa_binaria(){
 	}
 			
 	fclose(arquivo);
+	
+	return;	
+}
+
+void mostra_dados_bucket(){
+	char ch;
+	int BUFFER_SIZE = sizeof(bucket), opcao = 0, numero = 0, func_hash = 0;
+	FILE *bucket;
+	
+	struct bucket bucketTemp;
+	
+	bucket = fopen(URL_BUCKET, "rb");
+	if(bucket == NULL)
+	    printf("Erro, nao foi possivel abrir o arquivo\n");
+	else{
+		system("cls");
+		printf("0 - Todos\n");
+		printf("1 - Informado\n");
+		scanf("%d",&opcao);
+		
+		if (opcao == 0){
+			printf("Hash| Endereco\n");
+			while (fread(&bucketTemp,sizeof(struct bucket),1,bucket) != NULL)
+			{
+	    		lista_dados_bucket(bucketTemp);
+			}	
+		}
+		else{
+			printf("Informe o numero que deseja pesquisar\n");
+			scanf("%d",&numero);
+			
+			func_hash = numero % BLOCOS;
+			fseek(bucket,sizeof(struct bucket) * func_hash,SEEK_SET); 
+			fread(&bucketTemp,sizeof(struct bucket),1,bucket);
+			
+			printf("Hash| Endereco\n");
+			lista_dados_bucket(bucketTemp);
+		}
+	}
+			
+	fclose(bucket);
+	
+	return;	
+}
+
+void misc(){
+	int BUFFER_SIZE = sizeof(bucket);
+	FILE *bucket;
+	
+	struct bucket bucketTemp,newStruct;
+	struct nodo nodoTemp;
+	
+	bucket = fopen(URL_BUCKET, "wb");
+	if(bucket == NULL)
+	    printf("Erro, nao foi possivel abrir o arquivo\n");
+	else{
+		for (int i=0; i < 20; i++){
+			
+			itoa(i, bucketTemp.hash, 10);
+			
+			for(int i=0; i < LIM_BUCKET; i++){
+				strcpy(bucketTemp.values[i].numero,"");
+				//bucketTemp.values[i].endereco = 0;
+			}
+			fwrite(&bucketTemp,sizeof(struct bucket),1,bucket);	
+		}
+		
+		fclose(bucket);
+		fopen(URL_BUCKET, "r+");
+		
+		char buffer[BUFFER_SIZE];
+		int contador = 0;
+		
+		fseek(bucket,sizeof(struct bucket) * 10,SEEK_SET);	
+		if (fread(&bucketTemp,sizeof(struct bucket),1,bucket) > 0){
+			fseek(bucket,sizeof(struct bucket) * 10,SEEK_SET);
+			
+			//varre os elementos do bucket
+			for(int j=0;j < LIM_BUCKET;j++){
+				//encontrei uma posicao valida 
+				if (bucketTemp.values[j].numero == 0){
+					//printf("%d arr %d --\n",bucketTemp.hash,j);
+						
+					strcpy(nodoTemp.numero,"");
+					
+					newStruct= bucketTemp;
+					
+					for (int k=0;k < LIM_BUCKET; k++){
+						newStruct.values[k] = bucketTemp.values[k];	
+					}
+					newStruct.values[j] = nodoTemp;
+					break;
+				}
+			}
+			
+			fwrite(&newStruct,sizeof(struct bucket),1,bucket);
+		}
+	}
+			
+	fclose(bucket);
 	
 	return;	
 }
@@ -397,6 +523,91 @@ void shuffle(){
 	fclose(shuffle);
 }
 
+//inicializa meu arquivo de hash
+void init_hashing(){
+	FILE *bucket = fopen(URL_BUCKET, "wb");	
+	FILE *arquivo = fopen(URL, "rb");
+	struct data   dataTemp;
+	struct bucket bucketTemp,bucketInitialize, newStruct;
+	
+	if(arquivo == NULL){
+		printf("Nao foi possivel ler o arquivo.");
+		return;
+	}
+	//inicializa o bucket
+	for (int i=0;i < BLOCOS; i++){
+		itoa(i, bucketInitialize.hash, 10);
+		
+		for(int i=0; i < LIM_BUCKET; i++){
+			strcpy(bucketInitialize.values[i].numero,"");
+			//bucketInitialize.values[i].endereco = 0;
+		}
+		fwrite(&bucketInitialize,sizeof(struct bucket),1,bucket);
+	}
+	//commit
+	fclose(bucket);
+	bucket = fopen(URL_BUCKET, "r+");
+	
+	//seta para o fim do arquivo
+	fseek(arquivo,sizeof(struct data) * -1,SEEK_END);
+	
+	if (fread(&dataTemp,sizeof(struct data),1,arquivo) > 0){
+		int qtdeRegistros = dataTemp.numero;
+		int funcao_hash = 0;
+		int value = 0;
+		struct nodo nodoTemp;
+		
+		//le todos os registros do arquivo
+		for (int i=0; i < 100; i++){
+			fseek(arquivo,sizeof(struct data) * i,SEEK_SET);
+		
+			//le a linha
+			if (fread(&dataTemp,sizeof(struct data),1,arquivo) > 0){
+				value = dataTemp.numero;
+				
+				//funcao do hashing
+				funcao_hash = value % BLOCOS;
+				//seta a posicao cfe a funcao
+				fseek(bucket,sizeof(struct bucket) * funcao_hash,SEEK_SET);	
+				
+				if (fread(&bucketTemp,sizeof(struct bucket),1,bucket) > 0){
+					fseek(bucket,sizeof(struct bucket) * funcao_hash,SEEK_SET);	
+					
+					int encontrei_posicao = 0;
+					
+					//varre os elementos do bucket
+					for(int j=0;j < LIM_BUCKET;j++){
+						//encontrei uma posicao valida 
+						if (strcmp(bucketTemp.values[j].numero,"") == 0){
+							itoa(value, nodoTemp.numero, 10);
+							//nodoTemp.endereco = i;
+							
+							newStruct = bucketTemp;
+							for (int k=0;k < LIM_BUCKET; k++){
+								newStruct.values[k] = bucketTemp.values[k];	
+							}
+							
+							newStruct.values[j] = nodoTemp;
+							encontrei_posicao = 1;
+							break;
+						}
+					}
+					
+					if (encontrei_posicao == 0){
+						printf("preciso de um tratamento de colisao\n");
+					}
+					else
+						fwrite(&newStruct,sizeof(struct bucket),1,bucket);
+					
+				}
+			}
+		}
+	}
+	
+	fclose(arquivo);
+	
+}
+
 int main(){
 	int in_opcao = 1;
 	
@@ -408,6 +619,8 @@ int main(){
 		printf("4 - Pesquisa por Index\n");
 		printf("5 - Listar Dados Index\n");
 		printf("6 - Novo arquivo s/ ordem\n");
+		printf("7 - Inicializa Hashing\n");
+		printf("8 - Listar o bucket\n");
 		
 		scanf("%d",&in_opcao);
 		
@@ -430,6 +643,16 @@ int main(){
 			case 6:
 				shuffle();
 				break;
+			case 7:
+				init_hashing();
+				break;
+			case 8:
+				mostra_dados_bucket();
+				break;
+			case 9:
+				misc();
+				break;
+				
 		}
 		
 		system("pause");
