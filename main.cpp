@@ -8,16 +8,13 @@
 #define URL_SHUFFLE "data/data_shuffle.txt"
 #define URL_SHUFFLE_INDEX "data/index_shuffle.txt"
 //-----------------------------------
-/*
-INFORMACOES SOBRE O HASHING
-qtdeRegistros = 1014514
-blocos = qtdeRegistros * 0.8
-f(x) = x % blocos
-*/
 #define URL_BUCKET "data/bucket.txt"
 #define BLOCOS 12000
 #define LIM_BUCKET 100
 
+/*
+-------------------------------------------------------------------------- STRUCTS ------------------------------------------------------------------------------
+*/
 struct data{
 	int numero;
 	char nome[10];
@@ -44,6 +41,10 @@ struct header{
 	int qtdeRegistros;
 };
 
+/*
+-------------------------------------------------------------------------- METODOS ------------------------------------------------------------------------------
+* Lista os dados do arquivo principal referente ao arquivo do tipo sequencial
+*/
 void lista_dados (struct data dataTemp){
 	printf("%d  | ", dataTemp.numero);
 	printf("%s  |" , dataTemp.nome);
@@ -51,13 +52,17 @@ void lista_dados (struct data dataTemp){
 	printf("%f  "  , dataTemp.salario);
 	printf("\n");
 }
-
+/*
+* Lista as informacoes do arquivo 'indice' referente ao tipo 'sequencial indexado' conforme a struct
+*/
 void lista_dados_index (struct index indexTemp){
 	printf("%d  | ", indexTemp.numero);
 	printf("%d  |" , indexTemp.endereco);
 	printf("\n");
 }
-
+/*
+* Lista as informacoes do arquivo 'bucket' referente ao acesso direto conforme a struct
+*/
 void lista_dados_bucket(struct bucket bucketTemp){
 	printf("%s  | ", bucketTemp.hash);
 	
@@ -70,32 +75,8 @@ void lista_dados_bucket(struct bucket bucketTemp){
 	printf("\n");
 }
 
-struct data saveToStruct (char* str)
-{
-    struct data res;
-    int flag = 0;
-    char *token = strtok(str, ";"); 
-
-    while( token != NULL )
-    {
-    	if (0 == flag)
-            res.numero = atoi(token);
-        else 
-			if (1 == flag)
-            	strcpy(res.nome, token);
-        	else 
-				if (2 == flag)
-            		res.idade = atoi(token);
-            	else
-            		res.salario = atof(token);
-		flag++;
-        token = strtok( NULL, ";" ); 
-    }
-    return res;
-}
-
 /*
-* metodo responsavel por fazer a pesquisa binaria diretamente no arquivo de dados
+* Metodo responsavel por fazer a pesquisa binaria diretamente no arquivo de dados
 */ 
 int pesquisa_binaria_recursiva(FILE *arquivo,int nodo,int inicio, int fim){
 	struct data dataTemp;
@@ -132,7 +113,7 @@ int pesquisa_binaria_recursiva(FILE *arquivo,int nodo,int inicio, int fim){
 }
 
 /*
-* metodo responsavel por fazer a pesquisa binaria no arquivo de índice
+* Metodo responsavel por fazer a pesquisa binaria no arquivo de índice
 */ 
 int pesquisa_binaria_index(FILE *indice,int nodo,int inicio, int fim){
 	struct index indexTemp;
@@ -155,8 +136,7 @@ int pesquisa_binaria_index(FILE *indice,int nodo,int inicio, int fim){
 			/*
 			printf("2- indexTemp.numero: %d nodo: %d inicio: %d meio: %d fim: %d\n",indexTemp.numero,nodo,inicio, meio, fim);
 			system("pause");
-			*/
-			
+			*/			
 			return pesquisa_binaria_index(indice,nodo,meio,fim);
 		}
 		else
@@ -164,7 +144,9 @@ int pesquisa_binaria_index(FILE *indice,int nodo,int inicio, int fim){
 				return indexTemp.endereco;
 			}
 }
-
+/*
+* Metodo responsavel por fazer a pesquisa no arquivo sequencial, utilizando o algoritmo de pesquisa binaria;
+*/
 void pesquisa_binaria(){
 	int numero;
 	char ch;
@@ -202,9 +184,10 @@ void pesquisa_binaria(){
 			
 	fclose(arquivo);
 	
-	return;	
 }
-
+/*
+* Lista as informacoes no arquivo principal conforme o endereco encontrado no bucket
+*/
 void acessa_arquivo_principal(char endereco[10]){
 	FILE *arquivo = fopen(URL,"r");	
 	int posicao = atoi(endereco);
@@ -219,7 +202,9 @@ void acessa_arquivo_principal(char endereco[10]){
 	
 	lista_dados(dataTemp);
 }
-
+/*
+* Mostra os registros que estão 'indexados' pelo hashing utilizando a metodologia de acesso direto
+*/
 void mostra_dados_bucket(){
 	char ch;
 	int BUFFER_SIZE = sizeof(bucket), opcao = 0, numero = 0, func_hash = 0;
@@ -265,16 +250,15 @@ void mostra_dados_bucket(){
 				
 				if (strcmp(bucketTemp.values[i].numero,"") == 0)
 					break;
-			}
-			
+			}			
 		}
-	}
-			
+	}			
 	fclose(bucket);
-	
-	return;	
 }
-
+/*
+* Metodo responsavel por listar a quantidade utilizado do bucket
+* o recomendado e que se utilize entre 70 e 90% do bucket
+*/
 void alocacao_hashing(){
 	FILE *bucket;
 	
@@ -296,8 +280,7 @@ void alocacao_hashing(){
 					break;
 				else
 					qtdeUtilizado++;
-			}
-				
+			}				
 		}
 		
 		printf("Total utilizado: %d\n",qtdeUtilizado);
@@ -305,13 +288,13 @@ void alocacao_hashing(){
 		float prct = (qtdeUtilizado * 100) / qtdeTotal;
 		
 		printf("Percentual Utilizado %.2f\n",prct);
-	}
-			
+	}			
 	fclose(bucket);
 	
-	return;	
 }
-
+/*
+* Lista os registros que estao indexados
+*/
 void mostra_dados_index(){
 	char ch;
 	int BUFFER_SIZE = sizeof(index);
@@ -322,28 +305,20 @@ void mostra_dados_index(){
 	index = fopen(URL_INDEX, "rb");
 	if(index == NULL)
 	    printf("Erro, nao foi possivel abrir o arquivo\n");
-	else{
-		char buffer[BUFFER_SIZE];
-		int contador = 0;
-		
+	else{		
 		printf("Numero| Endereco\n");
     	   
 		while (fread(&indexTemp,sizeof(struct index),1,index) != NULL)
 		{
     		lista_dados_index(indexTemp);
-    		
-    		contador++;
-    		
-    		if (contador == 1000)
-    			break;
 		}
 	}
 			
-	fclose(index);
-	
-	return;	
+	fclose(index);	
 }
-
+/*
+* Metodo responsavel por listar os dados conforme o tipo de arquivo informado (sequencial ou nao)
+*/
 void mostra_dados(){
 	char ch;
 	int BUFFER_SIZE = sizeof(data), opcao = 0;
@@ -374,12 +349,12 @@ void mostra_dados(){
 		{
     		lista_dados(dataTemp);
 		}
-	}
-			
+	}			
 	fclose(arquivo);
-	
-	return;	
 }
+/*
+* Escreve no arquivo de indice a struct
+*/
 void indexar(FILE *index,int numero, int endereco){
 	struct index indexTemp;
 	
@@ -388,7 +363,9 @@ void indexar(FILE *index,int numero, int endereco){
 	
 	fwrite(&indexTemp,sizeof(struct index),1,index);
 }
-
+/*
+* Cria um novo arquivo de indice para o arquivo informado (Sequencial ou nao)
+*/
 void reindexar(){
 	char ch;
 	int BUFFER_SIZE = sizeof(data);
@@ -431,13 +408,13 @@ void reindexar(){
 		}
 		
 		fclose(index);
-	}
-			
+	}			
 	fclose(arquivo);
-	
-	return;		
 }
-
+/*
+* Pesquisa um determinado registro (pela chave principal, no caso numero)
+* a pesquisa sera feita pelo indice, utilizando a pesquisa binaria no indice
+*/
 void mostrar_por_index(){
 	char ch;
 	int BUFFER_SIZE = sizeof(data);
@@ -491,11 +468,10 @@ void mostrar_por_index(){
 	}
 			
 	fclose(index);
-	
-	return;
-	
 }
-
+/*
+* Pega o arquivo principal 'sequencial' e cria um novo sem a sequencialidade
+*/
 void shuffle(){
 	char ch;
 	int BUFFER_SIZE = sizeof(data);
@@ -535,8 +511,9 @@ void shuffle(){
 	fclose(arquivo);
 	fclose(shuffle);
 }
-
-//inicializa meu arquivo de hash
+/*
+* Inicializa o arquivo referente ao acesso direto 'hashing'
+*/
 void init_hashing(){
 	FILE *bucket = fopen(URL_BUCKET, "wb");	
 	FILE *arquivo = fopen(URL, "rb");
@@ -616,10 +593,86 @@ void init_hashing(){
 		}
 	}
 	fclose(bucket);
-	fclose(arquivo);
+	fclose(arquivo);	
+}
+/*
+* Verifica a integridade do arquivo sequencial 'default'
+* metodo: vou ate a ultima posicao e busco o numero do ultimo registro, pelo fato do arquivo ser sequencial (1,2,3...) sem quebra,
+* depois leio todos os registros e conto os registros
+*/
+int verif_sequencial(){
+	int ret = 0, qtdeRegistros = 0,qtdeRegistrosArquivo = 0;
+	FILE *arquivo = fopen(URL,"r");
+	struct data dataTemp;
+	
+	if (arquivo == NULL)
+		return 0;
+		
+	rewind(arquivo);
+	fseek(arquivo,sizeof(struct data) * -1,SEEK_SET);
+	ret = fread(&dataTemp,sizeof(struct data),1,arquivo);
+	
+	if (ret > 0)
+		qtdeRegistrosArquivo = dataTemp.numero;	
+		
+	rewind(arquivo);
+	while (fread(&dataTemp,sizeof(struct data),1,arquivo) != NULL){
+		qtdeRegistros++;	
+	}
+	
+	if (qtdeRegistros != qtdeRegistrosArquivo){
+		printf("Encontrei divergencia entre os arquivos\n");		
+	}
+	return qtdeRegistrosArquivo;	
+}
+/*
+* Verifica a integridade do arquivo indexado
+*/
+void verif_indexado(){
+	FILE *arquivo = fopen(URL_INDEX,"r");
+	
+	if (arquivo == NULL)
+		return;	
+}
+/*
+* Verifica a integridade do arquivo referente ao acesso direto 'hashing'
+*/
+void verif_direto(){
+	FILE *arquivo = fopen(URL_BUCKET,"r");
+	
+	if (arquivo == NULL)
+		return;	
 	
 }
+/*
+* Procedimento para verificar a integridade dos arquivos.
+*/
+void verif_integridade(){
+	int opcao = 0;
+	
+	system("cls");
+	printf("Informe qual arquivo deseja verificar a integridade");
+	printf("0 - Sequencial");
+	printf("1 - Indexado");
+	printf("2 - Acesso Direto");
+	scanf("%d",&opcao);
+	
+	switch(opcao){
+		case 0:
+			verif_sequencial();
+			break;
+		case 1:
+			verif_indexado();
+			break;
+		case 2:
+			verif_direto();
+			break;
+	}	
+}
 
+/*
+inicio do bloco
+*/
 int main(){
 	int in_opcao = 1;
 	
@@ -634,6 +687,7 @@ int main(){
 		printf("7 - Inicializa Hashing\n");
 		printf("8 - Listar o bucket\n");
 		printf("9 - Alocacao do bucket\n");
+		printf("10 - Verificar Integridade\n");
 		
 		scanf("%d",&in_opcao);
 		
@@ -665,7 +719,9 @@ int main(){
 			case 9:
 				alocacao_hashing();
 				break;
-				
+			case 10:
+				verif_integridade();
+				break;				
 		}
 		
 		system("pause");
