@@ -22,6 +22,12 @@ struct data{
 	float salario;
 };
 
+struct integridade{
+	long registrosArquivo;
+	long registrosEncontrados;
+	int integro;
+};
+
 struct index{
 	int numero;
 	int endereco;
@@ -133,7 +139,7 @@ int pesquisa_binaria_index(FILE *indice,int nodo,int inicio, int fim){
 	struct index indexTemp;
 	int meio = 0;
 	
-	meio = inicio + fim / 2;
+	meio = (inicio + fim) / 2;
 	
 	fseek(indice,meio * sizeof(struct index),SEEK_SET);	
 	fread(&indexTemp,sizeof(struct index),1,indice);
@@ -141,8 +147,8 @@ int pesquisa_binaria_index(FILE *indice,int nodo,int inicio, int fim){
 	if (nodo < indexTemp.numero){
 		/*
 		printf("1- dataTemp.numero: %d nodo: %d inicio, %d meio: %d fim: %d\n",indexTemp.numero,nodo,inicio, meio, fim);
-		system("pause");
-		*/
+		system("pause");*/
+		
 		return pesquisa_binaria_index(indice,nodo,inicio, meio);
 	}
 	else
@@ -187,7 +193,7 @@ void pesquisa_binaria(){
 		printf("Procurando...\n");
 		
 		//seta para o fim do arquivo
-		fseek(arquivo,sizeof(struct data) * -1,SEEK_END);
+		fseek(arquivo,(long)sizeof(struct data) * -1,SEEK_END);
 		
 		if (fread(&dataTemp,sizeof(struct data),1,arquivo) > 0){
 			int fim = dataTemp.numero;
@@ -316,7 +322,7 @@ void mostra_dados_index(){
 	
 	struct index indexTemp;
 	
-	index = fopen(URL_INDEX, "rb");
+	index = fopen(URL_SHUFFLE_INDEX, "rb");
 	if(index == NULL)
 	    printf("Erro, nao foi possivel abrir o arquivo\n");
 	else{		
@@ -369,6 +375,60 @@ void mostra_dados(){
 /*
 * Escreve no arquivo de indice a struct
 */
+void indexar_shuffle(int numero, int endereco){
+	FILE *index = fopen(URL_SHUFFLE_INDEX,"rb");
+	
+	struct index indexTemp,newStruct,indexAnterior;
+	int lg_atualiza = 0, primeiro = 1;	
+	newStruct.numero   = numero;
+	newStruct.endereco = endereco;
+	
+	printf("%dnumero\n",numero);	
+	
+	while (fread(&indexTemp,sizeof(struct index),1,index) != NULL)
+	{		
+		primeiro = 0;
+		
+		if (lg_atualiza == 0){		
+			printf("indexTemp.numero -> %d newStruct.numero-> %d\n",indexTemp.numero,newStruct.numero);
+			
+			if (indexTemp.numero > newStruct.numero){	
+				FILE *tmp = fopen(URL_SHUFFLE_INDEX,"w");
+				
+				fseek(tmp,ftell(index) - sizeof(struct index),SEEK_SET);
+				fwrite(&newStruct,sizeof(struct index),1,tmp);								
+				//fwrite(&indexTemp,sizeof(struct index),1,tmp);
+				fclose(tmp);	
+				lg_atualiza = 1;				
+				indexAnterior = indexTemp;
+			}
+		}
+		
+		if (!indexAnterior.numero == indexTemp.numero){		
+			if (lg_atualiza){
+				printf("oi\n");
+				FILE *tmp = fopen(URL_SHUFFLE_INDEX,"w");
+				
+				fseek(tmp,ftell(index),SEEK_SET);
+				fwrite(&indexAnterior,sizeof(struct index),1,tmp);
+				fclose(tmp);
+			}	
+		}
+				
+	}
+	
+	if (primeiro){
+		fclose(index);
+		index = fopen(URL_SHUFFLE_INDEX,"wb");		
+		fwrite(&newStruct,sizeof(struct index),1,index);	
+	}
+	
+	system("pause");
+	fclose(index);
+}
+/*
+* Escreve no arquivo de indice a struct
+*/
 void indexar(FILE *index,int numero, int endereco){
 	struct index indexTemp;
 	
@@ -403,7 +463,7 @@ void reindexar(){
 	if(arquivo == NULL)
 	    printf("Erro, nao foi possivel abrir o index\n");
 	else{
-		char buffer[BUFFER_SIZE];
+		int qtdeRegistros;
 		   
 		system("cls");
 		printf("reindexando arquivo, aguarde...\n");
@@ -411,14 +471,26 @@ void reindexar(){
 		fseek(arquivo,0,SEEK_SET);
 		//apaga o arquivo de indice e cria um novo
 		FILE *index;
-		if (opcao == 1)
+		if (opcao == 1){		
 			index = fopen(URL_INDEX, "wb");	
-		else 
+			
+			while (fread(&dataTemp,sizeof(struct data),1,arquivo) != NULL)
+			{
+	    		indexar(index,dataTemp.numero,ftell(arquivo));
+			}
+		}
+		else{		
 			index = fopen(URL_SHUFFLE_INDEX, "wb");
+			
+			while (fread(&dataTemp,sizeof(struct data),1,arquivo) != NULL)
+			{
+				indexar_shuffle(dataTemp.numero,ftell(arquivo));
+				qtdeRegistros++;
 				
-		while (fread(&dataTemp,sizeof(struct data),1,arquivo) != NULL)
-		{
-    		indexar(index,dataTemp.numero,ftell(arquivo));
+				if (qtdeRegistros >= 100){
+					break;
+				}
+			}
 		}
 		
 		fclose(index);
@@ -462,7 +534,7 @@ void mostrar_por_index(){
 	printf("Procurando...\n");
 		
 	//seta para o fim do arquivo
-	fseek(index,sizeof(struct index) * -1,SEEK_END);
+	fseek(index,(long)sizeof(struct index) * -1,SEEK_END);
 	
 	if (fread(&indexTemp,sizeof(struct index),1,index) > 0){
 		int fim = indexTemp.numero;
@@ -506,7 +578,7 @@ void shuffle(){
 	    return;
 	}
 	//seta para o fim do arquivo
-	fseek(arquivo,sizeof(struct data) * -1,SEEK_END);
+	fseek(arquivo,(long)sizeof(struct data) * -1,SEEK_END);
 	if (fread(&dataTemp,sizeof(struct data),1,arquivo) > 0){
 		qtdeRegistros = dataTemp.numero;	
 	}
@@ -560,7 +632,7 @@ void init_hashing(){
 	bucket = fopen(URL_BUCKET, "r+");
 	
 	//seta para o fim do arquivo
-	fseek(arquivo,sizeof(struct data) * -1,SEEK_END);
+	fseek(arquivo,(long)sizeof(struct data) * -1,SEEK_END);
 	
 	if (fread(&dataTemp,sizeof(struct data),1,arquivo) > 0){
 		int qtdeRegistros = dataTemp.numero;
@@ -619,16 +691,17 @@ void init_hashing(){
 * metodo: vou ate a ultima posicao e busco o numero do ultimo registro, pelo fato do arquivo ser sequencial (1,2,3...) sem quebra,
 * depois leio todos os registros e conto os registros
 */
-int verif_sequencial(){
+struct integridade verif_sequencial(){
 	int ret = 0, qtdeRegistros = 0,qtdeRegistrosArquivo = 0;
 	FILE *arquivo = fopen(URL,"r");
+	struct integridade intTemp;
 	struct data dataTemp;
 	
 	if (arquivo == NULL)
-		return 0;
+		return intTemp;
 		
 	rewind(arquivo);
-	fseek(arquivo,sizeof(struct data) * -1,SEEK_SET);
+	fseek(arquivo,(long)sizeof(struct data) * -1,SEEK_SET);
 	ret = fread(&dataTemp,sizeof(struct data),1,arquivo);
 	
 	if (ret > 0)
@@ -639,19 +712,38 @@ int verif_sequencial(){
 		qtdeRegistros++;	
 	}
 	
+	intTemp.registrosArquivo     = qtdeRegistrosArquivo;
+	intTemp.registrosEncontrados = qtdeRegistros;
+	
 	if (qtdeRegistros != qtdeRegistrosArquivo){
-		printf("Encontrei divergencia entre os arquivos\n");		
+		intTemp.integro = 0;
 	}
-	return qtdeRegistrosArquivo;	
+	else
+		intTemp.integro = 1;
 }
 /*
 * Verifica a integridade do arquivo indexado
 */
 void verif_indexado(){
 	FILE *arquivo = fopen(URL_INDEX,"r");
+	struct index indexTemp;
+	struct integridade intTemp;
+	int qtdeRegistros;
 	
 	if (arquivo == NULL)
 		return;	
+		
+	while (fread(&indexTemp,sizeof(struct index),1,arquivo) != NULL){
+		qtdeRegistros++;	
+	}
+	
+	intTemp = verif_sequencial();
+	
+	if (intTemp.registrosArquivo != qtdeRegistros){
+		printf("Arquivo nao integro\n");		
+	}
+	else
+		printf("Arquivo integro\n");
 }
 /*
 * Verifica a integridade do arquivo referente ao acesso direto 'hashing'
@@ -668,17 +760,24 @@ void verif_direto(){
 */
 void verif_integridade(){
 	int opcao = 0;
-	
+	struct integridade intTemp;
 	system("cls");
-	printf("Informe qual arquivo deseja verificar a integridade");
-	printf("0 - Sequencial");
-	printf("1 - Indexado");
-	printf("2 - Acesso Direto");
+	printf("Informe qual arquivo deseja verificar a integridade\n");
+	printf("0 - Sequencial\n");
+	printf("1 - Indexado\n");
+	printf("2 - Acesso Direto\n");
 	scanf("%d",&opcao);
 	
 	switch(opcao){
 		case 0:
-			verif_sequencial();
+			intTemp = verif_sequencial();
+			
+			if (intTemp.integro ==1){
+				printf("Registro Integro\n");				
+			}
+			else
+				printf("Registro Nao Integro\n");
+			
 			break;
 		case 1:
 			verif_indexado();
