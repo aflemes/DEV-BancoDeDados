@@ -112,6 +112,20 @@ int pesquisa_binaria_recursiva(FILE *arquivo,int nodo,int inicio, int fim){
 			}
 }
 
+int pesquisa_sequencial(FILE *indice,int nodo){
+	struct index indexTemp;
+	rewind(indice);
+	
+	while (fread(&indexTemp,sizeof(struct index),1,indice) != NULL)
+	{
+		if (indexTemp.numero == nodo){
+			return indexTemp.endereco;
+		}
+	}
+	
+	return 0;
+}
+
 /*
 * Metodo responsavel por fazer a pesquisa binaria no arquivo de índice
 */ 
@@ -119,7 +133,7 @@ int pesquisa_binaria_index(FILE *indice,int nodo,int inicio, int fim){
 	struct index indexTemp;
 	int meio = 0;
 	
-	meio = (inicio + fim) / 2;
+	meio = inicio + fim / 2;
 	
 	fseek(indice,meio * sizeof(struct index),SEEK_SET);	
 	fread(&indexTemp,sizeof(struct index),1,indice);
@@ -452,7 +466,12 @@ void mostrar_por_index(){
 	
 	if (fread(&indexTemp,sizeof(struct index),1,index) > 0){
 		int fim = indexTemp.numero;
-		int endereco = pesquisa_binaria_index(index,numero,1,fim);	
+		int endereco = 0;
+		
+		if (opcao == 1)
+			endereco = pesquisa_binaria_index(index,numero,1,fim);	
+		else
+			endereco = pesquisa_sequencial(index,numero);	
 		
 		if (endereco > 0){
 			arquivo = fopen(URL, "rb");			
