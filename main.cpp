@@ -144,19 +144,17 @@ int pesquisa_binaria_index(FILE *indice,int nodo,int inicio, int fim){
 	fseek(indice,meio * sizeof(struct index),SEEK_SET);	
 	fread(&indexTemp,sizeof(struct index),1,indice);
 	
-	if (nodo < indexTemp.numero){
-		/*
+	if (nodo < indexTemp.numero){		
 		printf("1- dataTemp.numero: %d nodo: %d inicio, %d meio: %d fim: %d\n",indexTemp.numero,nodo,inicio, meio, fim);
-		system("pause");*/
+		system("pause");
 		
 		return pesquisa_binaria_index(indice,nodo,inicio, meio);
 	}
 	else
-		if (nodo > indexTemp.numero){
-			/*
+		if (nodo > indexTemp.numero){			
 			printf("2- indexTemp.numero: %d nodo: %d inicio: %d meio: %d fim: %d\n",indexTemp.numero,nodo,inicio, meio, fim);
 			system("pause");
-			*/			
+						
 			return pesquisa_binaria_index(indice,nodo,meio,fim);
 		}
 		else
@@ -245,7 +243,7 @@ void mostra_dados_bucket(){
 			printf("Hash| Endereco\n");
 			while (fread(&bucketTemp,sizeof(struct bucket),1,bucket) != NULL)
 			{
-	    		lista_dados_bucket(bucketTemp);
+				lista_dados_bucket(bucketTemp);
 			}	
 		}
 		else{
@@ -317,7 +315,7 @@ void alocacao_hashing(){
 */
 void mostra_dados_index(){
 	char ch;
-	int BUFFER_SIZE = sizeof(index);
+	int contador = 0;
 	FILE *index;
 	
 	struct index indexTemp;
@@ -331,9 +329,34 @@ void mostra_dados_index(){
 		while (fread(&indexTemp,sizeof(struct index),1,index) != NULL)
 		{
     		lista_dados_index(indexTemp);
+    		
+    		contador++;
+    		
+    		if (contador > 1000){
+    			break;
+			}
 		}
 	}
 			
+	fclose(index);	
+}
+void inicializa(){
+	FILE *arquivo = fopen(URL,"rb");
+	FILE *index    = fopen(URL_SHUFFLE_INDEX,"wb");
+	struct data dataTemp;
+	struct index newStruct;
+	
+	fseek(arquivo,(long)sizeof(struct data) * -1,SEEK_END);
+	fread(&dataTemp,sizeof(struct data),1,arquivo);	
+	int qtdeRegistrosArquivo = dataTemp.numero;	
+	
+	for (int i=0; i < qtdeRegistrosArquivo;i++){
+		newStruct.numero   = i;
+		newStruct.endereco = sizeof(struct index) * i;	
+	
+		fwrite(&newStruct,sizeof(struct index),1,index);
+	}	
+	
 	fclose(index);	
 }
 /*
@@ -375,56 +398,15 @@ void mostra_dados(){
 /*
 * Escreve no arquivo de indice a struct
 */
-void indexar_shuffle(int numero, int endereco){
-	FILE *index = fopen(URL_SHUFFLE_INDEX,"rb");
+void indexar_shuffle(FILE *index,int numero, int endereco){
+	struct index newStruct;
 	
-	struct index indexTemp,newStruct,indexAnterior;
-	int lg_atualiza = 0, primeiro = 1;	
 	newStruct.numero   = numero;
 	newStruct.endereco = endereco;
 	
-	printf("%dnumero\n",numero);	
+	fseek(index,sizeof(struct index) * numero,SEEK_SET);
+	fwrite(&newStruct,sizeof(struct index),1,index);
 	
-	while (fread(&indexTemp,sizeof(struct index),1,index) != NULL)
-	{		
-		primeiro = 0;
-		
-		if (lg_atualiza == 0){		
-			printf("indexTemp.numero -> %d newStruct.numero-> %d\n",indexTemp.numero,newStruct.numero);
-			
-			if (indexTemp.numero > newStruct.numero){	
-				FILE *tmp = fopen(URL_SHUFFLE_INDEX,"w");
-				
-				fseek(tmp,ftell(index) - sizeof(struct index),SEEK_SET);
-				fwrite(&newStruct,sizeof(struct index),1,tmp);								
-				//fwrite(&indexTemp,sizeof(struct index),1,tmp);
-				fclose(tmp);	
-				lg_atualiza = 1;				
-				indexAnterior = indexTemp;
-			}
-		}
-		
-		if (!indexAnterior.numero == indexTemp.numero){		
-			if (lg_atualiza){
-				printf("oi\n");
-				FILE *tmp = fopen(URL_SHUFFLE_INDEX,"w");
-				
-				fseek(tmp,ftell(index),SEEK_SET);
-				fwrite(&indexAnterior,sizeof(struct index),1,tmp);
-				fclose(tmp);
-			}	
-		}
-				
-	}
-	
-	if (primeiro){
-		fclose(index);
-		index = fopen(URL_SHUFFLE_INDEX,"wb");		
-		fwrite(&newStruct,sizeof(struct index),1,index);	
-	}
-	
-	system("pause");
-	fclose(index);
 }
 /*
 * Escreve no arquivo de indice a struct
@@ -436,6 +418,39 @@ void indexar(FILE *index,int numero, int endereco){
 	indexTemp.endereco = endereco;
 	
 	fwrite(&indexTemp,sizeof(struct index),1,index);
+}
+
+void write_shuffle(int numero,int endereco){
+	FILE *index = fopen(URL_SHUFFLE_INDEX, "rb");
+	struct index newStruct;
+	
+	newStruct.numero   = numero;
+	newStruct.endereco = endereco;
+	
+	fseek(index,sizeof(struct index) * newStruct.numero,SEEK_SET);
+	fwrite(&newStruct,sizeof(struct index),1,index);
+	
+	fclose(index);	
+}
+
+void reindexar_shuffle(){
+	FILE *arquivo = fopen(URL,"rb");
+	struct data dataTemp;
+	struct index newStruct;
+	int contador;
+	
+	inicializa();
+	
+	fseek(arquivo,0,SEEK_SET);
+	
+	while (fread(&dataTemp,sizeof(struct data),1,arquivo) != NULL)
+	{		
+		write_shuffle(dataTemp.numero,ftell(arquivo));	
+		
+		if (dataTemp.numero % 1000 == 0)	{
+			printf("%d\n",dataTemp.numero);
+		}
+	}
 }
 /*
 * Cria um novo arquivo de indice para o arquivo informado (Sequencial ou nao)
@@ -479,19 +494,8 @@ void reindexar(){
 	    		indexar(index,dataTemp.numero,ftell(arquivo));
 			}
 		}
-		else{		
-			index = fopen(URL_SHUFFLE_INDEX, "wb");
-			
-			while (fread(&dataTemp,sizeof(struct data),1,arquivo) != NULL)
-			{
-				indexar_shuffle(dataTemp.numero,ftell(arquivo));
-				qtdeRegistros++;
-				
-				if (qtdeRegistros >= 100){
-					break;
-				}
-			}
-		}
+		else	
+			reindexar_shuffle();
 		
 		fclose(index);
 	}			
@@ -540,10 +544,7 @@ void mostrar_por_index(){
 		int fim = indexTemp.numero;
 		int endereco = 0;
 		
-		if (opcao == 1)
-			endereco = pesquisa_binaria_index(index,numero,1,fim);	
-		else
-			endereco = pesquisa_sequencial(index,numero);	
+		endereco = pesquisa_binaria_index(index,numero,1,fim);	
 		
 		if (endereco > 0){
 			arquivo = fopen(URL, "rb");			
@@ -654,7 +655,7 @@ void init_hashing(){
 				//seta a posicao cfe a funcao
 				fseek(bucket,sizeof(struct bucket) * funcao_hash,SEEK_SET);	
 				
-				if (fread(&bucketTemp,sizeof(struct bucket),1,bucket) > 0){
+				if (fread(&bucketTemp,sizeof(struct bucket),1,bucket) >= 0){
 					fseek(bucket,sizeof(struct bucket) * funcao_hash,SEEK_SET);	
 					
 					int encontrei_posicao = 0;
@@ -669,16 +670,15 @@ void init_hashing(){
 							newStruct = bucketTemp;
 							for (int k=0;k < LIM_BUCKET; k++){
 								newStruct.values[k] = bucketTemp.values[k];	
-							}
-							
+							}							
 							newStruct.values[j] = nodoTemp;
 							encontrei_posicao = 1;
 							break;
 						}
 					}
 					
-					if (encontrei_posicao == 1)
-						fwrite(&newStruct,sizeof(struct bucket),1,bucket);
+					if (encontrei_posicao == 1)						
+						fwrite(&newStruct,sizeof(struct bucket),1,bucket);										
 				}
 			}
 		}
@@ -693,7 +693,7 @@ void init_hashing(){
 */
 struct integridade verif_sequencial(){
 	int ret = 0, qtdeRegistros = 0,qtdeRegistrosArquivo = 0;
-	FILE *arquivo = fopen(URL,"r");
+	FILE *arquivo = fopen(URL,"rb");
 	struct integridade intTemp;
 	struct data dataTemp;
 	
@@ -701,7 +701,7 @@ struct integridade verif_sequencial(){
 		return intTemp;
 		
 	rewind(arquivo);
-	fseek(arquivo,(long)sizeof(struct data) * -1,SEEK_SET);
+	fseek(arquivo,(long)sizeof(struct data) * -1,SEEK_END);
 	ret = fread(&dataTemp,sizeof(struct data),1,arquivo);
 	
 	if (ret > 0)
@@ -716,6 +716,7 @@ struct integridade verif_sequencial(){
 	intTemp.registrosEncontrados = qtdeRegistros;
 	
 	if (qtdeRegistros != qtdeRegistrosArquivo){
+		printf("%d - %d",qtdeRegistros,qtdeRegistrosArquivo);
 		intTemp.integro = 0;
 	}
 	else
@@ -725,7 +726,7 @@ struct integridade verif_sequencial(){
 * Verifica a integridade do arquivo indexado
 */
 void verif_indexado(){
-	FILE *arquivo = fopen(URL_INDEX,"r");
+	FILE *arquivo = fopen(URL_INDEX,"rb");
 	struct index indexTemp;
 	struct integridade intTemp;
 	int qtdeRegistros;
@@ -749,10 +750,35 @@ void verif_indexado(){
 * Verifica a integridade do arquivo referente ao acesso direto 'hashing'
 */
 void verif_direto(){
-	FILE *arquivo = fopen(URL_BUCKET,"r");
+	FILE *bucket = fopen(URL_BUCKET,"rb");
+	struct bucket bucketTemp;
+	struct integridade intTemp;
+	int qtdeRegistros = 0;
 	
-	if (arquivo == NULL)
+	if (bucket == NULL)
 		return;	
+		
+	rewind(bucket);
+	while (fread(&bucketTemp,sizeof(struct bucket),1,bucket) != NULL)
+	{		
+		for(int i =0; i < LIM_BUCKET; i++){
+			if (strcmp(bucketTemp.values[i].numero,"") == 0)
+				break;
+			else
+				qtdeRegistros++;
+		}
+	}
+	
+	intTemp = verif_sequencial();
+	
+	if (intTemp.registrosArquivo != qtdeRegistros){
+		printf("intTemp.registrosArquivo %d\n",intTemp.registrosArquivo);
+		printf("qtdeRegistros %d\n",qtdeRegistros);
+		
+		printf("Arquivo nao integro\n");		
+	}
+	else
+		printf("Arquivo integro\n");
 	
 }
 /*
@@ -787,7 +813,6 @@ void verif_integridade(){
 			break;
 	}	
 }
-
 /*
 inicio do bloco
 */
@@ -839,7 +864,7 @@ int main(){
 				break;
 			case 10:
 				verif_integridade();
-				break;				
+				break;			
 		}
 		
 		system("pause");
